@@ -1,0 +1,213 @@
+#!#######################
+!### Module 1 - OSPF ###
+!#######################
+!### show OSPF neighbor table (adjacency database)
+show ip ospf neighbor
+
+!### show OSPF topology table (LSDB)
+show ip ospf database
+
+!### show OSPF routes
+show ip route ospf
+
+
+
+
+!#####################################
+!### Module 2 - OSPF Configuration ###
+!#####################################
+
+!### Configure network on an subnet
+router ospf 1
+network 10.0.0.0 0.0.0.255 area 0
+
+
+!### Configure network on an interface
+router ospf 1
+network 10.0.0.1 0.0.0.0 area 0
+
+
+!### Configure OSPF directly on an interface without the network statement
+interface g0/0/1
+ip ospf 1 area 0
+
+
+!### Disable OSPF DR/BDR election
+interface g0/0/1
+ip ospf network point-to-point
+
+
+!### Reset the router ID
+router ospf 1
+router-id 1.1.1.1
+end
+conf t
+clear ip ospf process
+
+
+!### Configure interface priority
+interface g0/0/1
+ip ospf priority <1-255>
+
+
+!### Adjust the reference bandwidth (1000 Mbps to adjust for a 1 Gig link)
+router ospf 1
+auto-cost reference-bandwidth <Mbps>
+
+
+!### Adjust the cost of a link manually
+interface g0/0/1
+ip ospf cost 100
+
+
+!### Check DEAD and HELLO timers
+show ip ospf interface g0/0/1
+
+
+!### Modify DEAD and HELLO timers
+interface g0/0/1
+ip ospf hello-interval <seconds>
+ip ospf dead-interval <seconds>
+
+
+!### Propagate the default route
+ip route 0.0.0.0 0.0.0.0
+router ospf 1
+default-information originate
+
+
+!### Show OSPF protocol settings
+show ip protocols
+
+!### Show OSPF interface information
+show ip ospf interface g0/0/1
+show ip ospf interface brief
+
+
+!### Configure OSPF route summarization for 11.0.1.0/24 and 11.0.2.0/24 (ABR only)
+router ospf 10
+area 10 range 11.0.0.0 255.255.0.0
+
+
+
+
+!#####################################
+!### Module 4 - ACL Configuration ####
+!#####################################
+
+
+!### Numbered standard IPv4 ACL
+!# access-list <1-99> { deny | permit | remark [text] } source [source-wildcard] [log]
+
+!# Block 172.16.24.0/24
+access-list 1 remark Deny 172.16.24.0/24 subnet
+access-list 1 deny 172.16.24.0 0.0.0.255
+
+!# Apply ACL 1 to s0/1/0, outbound
+interface s0/1/0
+ip access-group 1 out
+
+
+!### Named standard IPv4 ACL
+!# ip access-list standard _access-list-name_
+!# ?
+
+!# Apply strict inbound access to s0/1/0
+ip access-list standard LIMITED-ACCESS
+remark ACE permits access host 192.168.10.10
+permit host 192.168.10.10
+remark ACE denies any other access
+deny any
+exit
+interface s0/1/0
+ip access-group LIMITED-ACCESS in
+
+
+!### Show access lists present in memory
+show access-lists
+
+
+!### Clear ACL statistics on the LIMITED-ACCESS ACL
+show access-lists
+clear access-list counters LIMITED-ACCESS
+show access-lists
+
+
+!### Modify an ACE using its sequence number
+show access-lists
+ip access-list LIMITED-ACCESS
+no 10
+10 deny host 192.168.10.10
+
+
+!### Secure a VTY line with an ACL
+!# access-list { _acl-number_ | _acl-name_ } { in | out }
+username admin secret cisco
+ip access-list standard ADMIN-HOST
+remark Secure incoming VTY lines
+permit host 192.168.10.10
+deny any
+exit
+line vty 0 ?
+line vty 0 4
+login local
+transport input ssh
+access-class ADMIN-HOST in
+
+
+!### Numbered extended IPv4 ACL
+!# access-list <100-199> { deny | perimt | remark [text] } <protocol> <source> <source-wildcard> [operator [port]] <destination> <destination-wildcard> [operator [port]] [established]
+!# [log]
+
+!# Permit DNS only from LAN and permit DNS responses from WAN
+access-list 100 remark Permit outgoing DNS requests over TCP
+access-list 100 permit tcp 192.168.10.0 0.0.0.255 eq 53 any
+
+!# Permit HTTP
+access-list 100 remark Permit HTTP
+access-list 100 permit tcp any any 
+
+
+!### ACL Verification
+!# Verify the ACL on the interface and its direction
+show ip interface
+
+!# Validate the ACL configurations
+show running-config
+
+!# Verify ACL operation with counters and check ACEs in an ACL
+show access-lists
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
