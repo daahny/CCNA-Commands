@@ -1,0 +1,38 @@
+!### Basic Switch Configuration Script ###
+!###  Change configurations as needed  ###
+en
+conf t
+hostname SW1
+username admin secret cisco
+no ip domain-lookup
+banner motd #Unauthorized access is strictly prohibited!#
+
+security passwords min-length 8
+login block-for 120 attempts 3 within 60
+service password-encryption
+enable secret cisco
+
+ip domain-name cisco.com
+crypto key generate rsa modulus 1024
+ip ssh version 2
+
+line vty 0 15
+logging synchronous
+login local
+transport input ssh
+
+line con 0
+logging synchronous
+login local
+exec-timeout 120
+
+int vlan 1
+ip address 10.0.0.2 255.255.255.0 
+no shut
+exit
+
+ip default-gateway 10.0.0.1
+
+end
+wr
+reload
