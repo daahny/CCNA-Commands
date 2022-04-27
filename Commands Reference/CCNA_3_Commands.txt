@@ -1,6 +1,9 @@
 #!#######################
-!### Module 1 - OSPF ###
-!#######################
+!### Module 1 - OSPF ####
+!########################
+
+
+
 !### show OSPF neighbor table (adjacency database)
 show ip ospf neighbor
 
@@ -16,6 +19,9 @@ show ip route ospf
 !#####################################
 !### Module 2 - OSPF Configuration ###
 !#####################################
+
+
+
 
 !### Configure network on an subnet
 router ospf 1
@@ -94,6 +100,8 @@ area 10 range 11.0.0.0 255.255.0.0
 !#####################################
 !### Module 4 - ACL Configuration ####
 !#####################################
+
+
 
 
 !### Numbered standard IPv4 ACL
@@ -181,9 +189,228 @@ show access-lists
 
 
 
+!#####################################
+!########## Module 5 - NAT ###########
+!#####################################
 
 
 
+
+!### Configure Static NAT
+!# Map the IP addresses
+ip nat inside source static 192.168.0.5 209.165.200.5
+
+!# Configure interfaces as inside and outside
+int fa0/1
+ip address 192.168.0.1 255.255.255.252
+ip nat inside
+int s0/1/1
+ip address 209.165.200.1 255.255.255.252
+ip nat outside
+
+!# Verify NAT operation
+show ip nat translations
+
+!# Clear NAT statistics before checking NAT operation
+clear ip nat statistics
+show ip nat statistics
+
+
+!### Configure Dynamic NAT
+!# Define the pool of public IP addresses
+ip nat pool NAT-POOL1 209.165.200.230 209.165.200.245 netmask 255.255.255.224
+
+!# ACL permit addresses to be translated
+access-list 69 permit 192.168.0.0 0.0.0.31
+
+!# Bind the ACL to the pool
+ip nat inside source list 69 pool NAT-POOl1
+
+!# Configure interfaces as inside and outside
+int fa0/1
+ip nat inside
+int s0/1/1
+ip nat outside
+
+!# Check the translation
+show ip nat translations verbose
+
+!# Optional: Configure the dynamic NAT timeout (in seconds)
+ip nat translation timeout 3600
+
+
+!### Delete NAT entry before NAT timeout
+clear ip nat translation *
+clear ip nat translation inside 209.165.200.5 192.168.0.5
+
+
+!### Configure PAT to use a single IPv4 address
+access-list 69 permit 192.168.0.0 0.0.255.255
+ip nat inside source list 69 interface serial0/1/1 overload
+int fa0/1
+ip nat inside
+int s0/1/1
+ip nat outside
+
+
+!### Configure PAT to use a pool of IPv4 addresses
+access-list 69 permit 192.168.0.0 0.0.255.255
+ip nat pool NAT-POOl2 209.165.200.2 209.165.200.62 netmask 255.255.255.192
+ip nat inside source list 69 pool NAT-POOL2 overload
+int fa0/1
+ip nat inside
+int s0/1/1
+ip nat outside
+
+
+
+
+!#####################################
+!## Module 10 - Network Management ###
+!#####################################
+
+
+
+
+!### Toggle CDP globally
+cdp run
+no cdp run
+
+
+!### Toggle CDP per interface
+interface fa0/1
+cdp enable
+no cdp enable
+
+
+!### Verify CDP status and show general CDP information
+show cdp
+
+
+!### Show CDP neighbors
+show cdp neighbors
+show cdp neighbors detail
+
+
+!### Show CDP enabled interfaces
+show cdp interface
+
+
+
+!### Toggle LLDP globally
+lldp run
+
+
+!### Toggle LLDP per interface
+interface fa0/1
+lldp transmit
+lldp receive
+
+
+!### Verify LLDP status and show general LLDP information
+show lldp
+
+
+!### Show LLDP neighbors
+show lldp neighbors
+show lldp neighbors detail
+
+
+
+!### Manually configure time (enable mode)
+clock set 16:01:00 6 june 1993
+
+
+!### Configure and verify NTP assocations and status
+conf t
+ntp server 209.165.200.1
+end
+show ntp assocations
+show ntp status
+
+
+!### Show the device time and the time configuration source
+show clock detail
+
+
+
+!### Enable timestamping for IOS logs
+service timestamps log datetime
+
+
+
+!### IOS filesystem navigation
+show file systems
+cd
+pwd
+dir
+
+
+!### Transfer files to TFTP or USB
+copy running-config tftp:
+copy tftp: startup-config
+copy running-config usbflash:
+
+
+!### Password recovery
+!# Enter ROMMON mode 
+rommon 1 > confreg 0x2142
+rommon 2 > reload
+copy startup-config running-config
+enable secret p@ssw0rd
+config-register 0x2102
+copy run start
+reload
+
+
+!### Specify an IOS image to load on boot
+boot system <IOS-FILE>
+show version
+show boot 
+
+
+
+
+!#####################################
+!#### Module 12 - Troubleshooting ####
+!#####################################
+
+
+
+
+!### Important show commands for gathering information
+show version
+show ip interface
+show ip interface brief
+show ipv6 interface
+show ipv6 interface brief
+show interfaces
+show ip route
+show ipv6 route
+show cdp neighbors detail
+show arp
+show ipv6 neighbors
+show running-config
+show startup-config
+show vlan
+show port
+show protocols
+show ip protocols
+show tech-support
+
+
+!### Verify integrity of devices
+show processes cpu
+show memory
+show interfaces
+
+
+!### Verify default gateway
+show ip route | include Gateway|0.0.0.0
+
+
+!### Manually set a DNS resolution
+ip host ip-server 172.16.1.100
 
 
 
