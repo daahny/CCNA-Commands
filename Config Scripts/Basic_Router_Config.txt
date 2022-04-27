@@ -4,14 +4,18 @@
 en
 conf t
 hostname R1
-username admin secret cisco
+username admin secret ciscocon
 no ip domain-lookup
 banner motd #Unauthorized access is strictly prohibited!#
 
 security passwords min-length 8
 login block-for 120 attempts 3 within 60
 service password-encryption
-enable secret cisco
+enable secret ciscocon
+
+ip domain-name cisco.com
+crypto key generate rsa modulus 1024
+ip ssh version 2
 
 line vty 0 807
 logging synchronous
@@ -19,15 +23,11 @@ transport input ssh
 login local
 exec-timeout 120
 
-ip domain-name cisco.com
-crypto key generate rsa modulus 1024
-ip ssh version 2
-
 line con 0
 login local
 exec-timeout 120
 logging synchronous
-exec-timeout
 
 end
 wr
+
