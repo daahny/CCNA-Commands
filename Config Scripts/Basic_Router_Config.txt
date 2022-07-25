@@ -31,3 +31,8 @@ logging synchronous
 end
 wr
 
+int s0/1/0
+ip ospf network point-to-point
+int s0/1/1
+ip ospf network point-to-point
+

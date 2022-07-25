@@ -61,7 +61,7 @@ name STUDENT
 
 !### VLAN assignment
 interface fa0/18
-switchport mode access
+switchport mode `
 switchport access vlan 20
 
 
@@ -174,6 +174,439 @@ end
 
 
 !### Configure Layer 3 Switch Inter-VLAN Routing
+!# Configure the VLANs on all switches
+vlan 10
+name student
+vlan 20
+name teacher
+
+!# Configure the appropriate trunk ports and access ports
+int fa0/1
+switchport mode access
+switchport nonegotiate
+switchport access vlan 10
+
+int G0/1
+switchport mode trunk
+switchport nonegotiate
+switchport trunk allowed vlan 10,20,30
+switchport trunk native vlan 30
+!# etc.
+
+!# Configure the layer 3 switch
+!# configure the VLANs
+!# configure the trunking ports
+ip routing
+int range G0/1-2
+switchport trunk encapsulation dot1q
+switchport mode trunk
+!# configure the SVIs
+int vlan 10
+ip address 192.168.10.1 255.255.255.0
+no shut
+int vlan 20
+ip address 192.168.20.1 255.255.255.0
+no shut
+!# configure the routed port
+int fa0/24
+no switchport
+ip address 209.165.201.2 255.255.255.252
+description Link to R1
+no shut
+end
+
+!# Confirm configurations
+show vlan
+show vlan brief
+show interfaces switchport
+show interfaces trunk
+show running-config
+show running-config interface G0/1
+show ip interface brief
+ping
+
+
+
+
+!#####################################
+!###### Module 6 - EtherChannel ######
+!#####################################
+
+
+
+
+!### Configure a PAgP EtherChannel
+interface range fa0/1-4
+speed auto
+duplex auto
+channel-group 1 mode dynamic
+interface port-channel 1
+switchport mode trunk
+switchport trunk allowed vlan 10,20,30
+
+
+!### Configure a LACP EtherChannel
+interface range fa0/1-4
+speed auto
+duplex auto
+channel-group 1 mode active
+interface port-channel 1
+switchport mode trunk
+switchport trunk allowed vlan 10,20,30
+
+
+!### Confirm EtherChannel configuration
+show interfaces port-channel 1
+show etherchannel summary
+show etherchannel port-channel
+show interfaces fa0/1 etherchannel
+
+
+!### Modify an existing EtherChannel to prevent interfering with STP
+no interface port-channel 1
+interface range fa0/1-4
+channel-group 1
+!# etc.
+
+
+
+
+!#####################################
+!######### Module 7 - DHCPv4 #########
+!#####################################
+
+
+
+
+!### Configure a Cisco router as a DHCPv4 server
+ip dhcp excluded-addresses 192.168.0.1 192.168.0.3
+ip dhcp pool LAN-POOL
+network 192.168.10.0 255.255.255.0
+default-router 192.168.10.1
+dns-server 192.168.11.5
+domain-name example.com
+lease 1 24 60
+lease infinite
+netbios-name-server 1.2.3.4
+
+
+!### Disable & re-enable a DHCPv4 server
+no service dhcp
+service dhcp
+
+
+!### Confirm DHCP configuration
+show running-config | section dhcp
+
+
+!### Show DHCP IP-to-MAC address bindings
+show ip dhcp binding
+
+
+!### Show DHCP server statistics (# of DHCP messages sent/received)
+show ip dhcp server statistics
+
+
+!### Configure DHCPv4 relay
+!# on LAN interface
+interface fa0/1
+ip helper-address 172.16.254.80
+
+
+!### Configure a router as a DHCP client from an ISP DHCP server
+interface S0/1/0
+ip address dhcp
+
+
+
+
+!#####################################
+!##### Module 8 - SLAAC & DHCPv6 #####
+!#####################################
+
+
+
+
+!### Enable forwarding of IPv6 unicast datagrams and join the router to IPv6 all-routers multicast
+ipv6 unicast-routing
+
+
+!### Enable IPv6 processing on an interface that has not been configured with an explicit IPv6 address
+!# This enables IPv6 processing on the interface and automatically configures an LLA
+interface G0/1
+ipv6 enable
+
+
+!### Enable SLAAC
+ipv6 unicast-routing
+int G0/1
+ipv6 addr 2001:ab8:acad:1::1/64
+ipv6 addr fe80::1 link-local
+exit
+show ipv6 interface G0/1 | section Joined
+
+
+!### Enable SLAAC w/ DHCPv6 RAs
+interface G0/1
+ipv6 nd other-config-flag
+
+
+!### Enable stateful DHCPv6 RAs
+ipv6 nd managed-config-flag
+ipv6 nd prefix default no-autoconfig
+
+
+!### Configure a Router as a Stateless DHCPv6 Server
+ipv6 unicast-routing
+
+ipv6 dhcp pool DHCP-POOL6
+dns-server 2001:db8:acad:1::254
+domain-name example.com
+exit
+
+int g0/0/1
+ipv6 address fe80::1 link-local
+ipv6 address 2001:db8:acad:1::1/64
+ipv6 nd other-config-flag
+ipv6 dhcp server DHCP-POOL6
+
+
+!### Configure a Router as a Stateful DHCPv6 Server
+ipv6 unicast-routing
+
+ipv6 dhcp pool DHCP-POOL6
+address prefix 2001:db8:acad:1::/64
+dns-server 2001:4860:4860::8888
+domain-name cisco.com
+
+int g0/0/1
+ipv6 address fe80::1 link-local
+ipv6 address 2001:db8:acad:1::1/64
+ipv6 nd managed-config-flag
+ipv6 nd prefix default no-autoconfig
+ipv6 dhcp server DHCP-POOL6
+
+
+!### Configure a router as a SLAAC client
+ipv6 unicast-routing
+int g0/0/1
+ipv6 enable
+ipv6 address autoconfig
+
+
+!### Configure a router as a stateful DHCPv6 client
+ipv6 unicast-routing
+int g0/0/1
+ipv6 enable
+ipv6 address dhcp
+
+
+!### Verify DHCPv6 Server Parameters
+show ipv6 dhcp pool
+
+
+!### Show LLA to GUA binings on a stateful DHCPv6 server
+show ipv6 dhcp binding
+
+
+!### Configure DHCPv6 Relay
+interface g0/0/1
+!# on LAN interface, going out of g0/0/0 to DHCPv6 server
+ipv6 dhcp relay destination 2001:db8:acad:1::2 g0/0/0
+
+
+!### Verify DHCPv6 Relay Agent
+show ipv6 dhcp interface
+
+
+
+
+!#####################################
+!########## Module 9 - HSRP ##########
+!#####################################
+
+
+
+
+!### Configure HSRP
+int g0/0
+standby version 2
+standby 1 192.168.1.254
+standby 1 priority 150
+standby preempt
+
+
+!### Confirm HSRP
+show standby
+show standby brief
+
+
+
+
+!#####################################
+!#### Module 11 - Switch Security ####
+!#####################################
+
+
+
+
+!### Configure Port Security on a switch
+int range fa0/3-24
+shut
+int fa0/1
+switchport mode trunk
+int fa0/2
+switchport mode access
+switchport port-security
+
+
+!### Configure port security aging
+!# Configure aging for statically learned MAC addresses
+switchport port-security aging static time 60 type inactivity
+!# Confiure aging for MAC addresses, regardless of inactivity
+switchport port-security aging static time 60 type absolute
+
+
+!### Configure secure MAC addresses
+!# Statically
+switchport port-security masc-address a0:04:2b:cc:ca:5d
+!# Dynamically - *default option*
+!# Dynamically with sticky
+switchport port-security mac-address sticky
+
+
+!### Configure max # of MAC addresses
+switchport port-security maximum 3
+
+
+!### Configure violations
+switchport port-security violation shutdown
+
+
+!### View port security summary
+show port-security
+show port-security interface fa0/1
+
+
+!### View secure MAC addresses on the switch
+show port-security address
+
+
+!### Configure DHCP snooping
+ip dhcp snooping
+int fa0/1
+ip dhcp snooping trust
+int range fa0/2-24
+ip dhcp snooping limit rate 2
+exit
+ip dhcp snooping vlan 10,20,30,50-52
+
+
+!### Verify DHCP snooping
+show ip dhcp snooping
+
+
+!### Verify DHCP snooping binding table
+show ip dhcp snooping binding
+
+
+!### Configure DAI
+ip dhcp snooping
+ip dhcp snooping vlan 10
+ip arp inspection vlan 10
+interface fa0/1
+ip dhcp snooping trust
+ip arp inspection trust
+exit
+ip arp inspection validate src-mac dst-mac ip
+
+
+!### Configure PortFast
+!# globally
+spanning-tree portfast default
+!# per interface
+spanning-tree portfast
+
+
+!### Configure BPDU Guard
+!# globally
+spanning-tree portfast bpduguard default
+!# per interface
+spanning-tree bpduguard enable
+!# confirm
+show spanning-tree summary
+
+
+!### Recover an err-disabled interface without manually shutting/no-shutting
+errdisable recovery cause bpduguard
+
+
+
+
+!#####################################
+!#### Module 15 - Static Routing #####
+!#####################################
+
+
+
+
+!### Configure a next-hop static route
+ip route 172.23.1.0 255.255.255.0 192.168.5.254
+ip route 2001:db8:cafe:1::/64 2001:db8:acad:10::1
+
+
+!### Configture a directly connected static route
+ip route 172.23.1.0 255.255.255.0 S0/1/0
+ipv6 route 2001:db8:cafe:1::/64 S0/1/0
+
+
+!### Configure a fully specified static route (necessary for IPv6 LLA link)
+ipv6 route 2001:db8:cafe:4::/64 S0/1/0 fe80::4
+
+
+!### Confirm static routing configurations
+show ip route static
+show ipv6 route static
+
+show ip route 172.23.1.0 255.255.255.0
+show ip route 2001:db8:cafe:50::/64
+
+show run | section ip route
+show run | section ipv6 route
+
+
+!### Configure floating static routes (use the administrative distance parameter)
+ip route 0.0.0.0 0.0.0.0 209.165.201.1
+ip route 0.0.0.0 0.0.0.0 209.40.100.254 5
+
+
+!### Configure static host routes
+ip route 192.168.0.10 255.255.255.255 209.165.201.1
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
